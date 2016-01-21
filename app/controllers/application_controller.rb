@@ -34,7 +34,11 @@ class ApplicationController < Sinatra::Base
   end
 
   get '/login' do
-    erb :'users/login'
+    if session[:user_id] #if user is already logged in
+      redirect '/tweets'
+    else
+      erb :'users/login'
+    end
   end
 
   post '/login' do
@@ -48,11 +52,12 @@ class ApplicationController < Sinatra::Base
   end
 
   get '/logout' do
-
-  end
-
-  post '/logout' do
-
+    if session[:user_id]
+      session.destroy #log out
+      redirect to '/login'
+    else
+      redirect to '/'
+    end
   end
 
   get '/tweets' do
@@ -66,34 +71,79 @@ class ApplicationController < Sinatra::Base
   end
 
   get '/users/:user_slug' do
-    #@user =
-    #erb
+    @user = User.find_by_slug(params[:slug])
+    erb :'users/show_user'
   end
 
   get '/tweets/new' do
-    erb :'tweets/create_tweet'
+    if session[:user_id]
+      erb :'tweets/create_tweet'
+    else
+      redirect to '/login'
+    end
   end
 
   post '/tweets' do
-    @tweet = Tweet.create(content: params[:content])
-    #@tweet.user_id = ??
+    if params[:content].empty?
+      redirect to '/tweets/new'
+    else
+      @tweet = Tweet.create(content: params[:content], user_id: session[:user_id])
+    end
   end
 
   get '/tweets/:tweet_id' do
-    @tweet = Tweet.find_by_id(params[:tweet_id])
-    erb :'tweets/show_tweet'
+    if session[:user_id] #if user is logged in
+      @tweet = Tweet.find_by_id(params[:tweet_id])
+      erb :'tweets/show_tweet'
+    else
+      redirect to '/login'
+    end
   end
 
   get '/tweets/:tweet_id/edit' do
-    erb :'tweets/edit_tweet'
+    if session[:user_id] #if user is logged in
+      @tweet = Tweet.find_by_id(params[:tweet_id])
+      if @tweet.user_id == session[:user_id] #make sure the user id of the tweet matches the id of the user currently logged in
+        erb :'tweets/edit_tweet'
+      else
+        redirect to '/tweets'
+      end
+    else
+      redirect to '/login'
+    end
   end
 
   post '/tweets/:tweet_id' do
-
+    if params[:content].empty?
+      redirect to "/tweets/#{params[:tweet_id]}/edit"
+    else
+      @tweet = Tweet.find_by_id(params[:tweet_id])
+      @tweet.content = params[:content]
+      @tweet.save
+      redirect to "/tweets/#{@tweet.id}"
+    end
   end
 
   post '/tweets/:tweet_id/delete' do
+    @tweet = Tweet.find_by_id(params[:tweet_id])
+    if session[:user_id] #if user is logged in
+      if @tweet.user_id == session[:user_id]
+        @tweet.delete
+      end
+      redirect to '/tweets'
+    else
+      redirect to '/login'
+    end
+  end
 
+  helpers do #could potentially refactor using these helper methods
+    def logged_in?
+      !!session[:user_id]
+    end
+
+    def current_user
+      User.find(session[:user_id])
+    end
   end
 
 end

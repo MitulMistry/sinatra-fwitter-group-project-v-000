@@ -4,6 +4,15 @@
     <title>Fwitter</title>
   </head>
   <body>
+    <% if logged_in? %>
+      <a href="/tweets"> View Tweets </a>
+      <a href="/tweets/new"> Create Tweet </a>
+      <a href="/logout"> Log Out </a>      
+    <% else %>
+      <a href="/signup">Sign Up</a>
+      <a href="/login"> Sign In </a>
+    <%end %>
+
     <%= yield %>
   </body>
 </html>
